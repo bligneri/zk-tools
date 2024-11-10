@@ -11,17 +11,21 @@
     let height = 1080;
     let width = 1440;
 
-    const links = data.links.map(d => Object.create(d));
+       const links = data.links.map(d => Object.create(d));
     const nodes = data.nodes.map(d => Object.create(d));
 
     const simulation = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(links).id(d => d.id))
-        .force("charge", d3.forceManyBody())
-        .force("x", d3.forceX())
-        .force("y", d3.forceY());
+        .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-200))
+        .force("center", d3.forceCenter(0, 0))
+        .force("collision", d3.forceCollide().radius(40));
+
 
     const svg = d3.select(document.body).append("svg")
-        .attr("viewBox", [-width / 2, -height / 2, width, height]);
+        .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .style("border", "1px solid black") // Optional: add a border for visualization
+        .call(d3.zoom().on("zoom", ({transform}) => svg.attr("transform", transform))) // Add zoom functionality
+        .append("g");
 
     const link = svg.append("g")
         .attr("stroke", "#999")
@@ -29,7 +33,7 @@
         .selectAll("line")
         .data(links)
         .join("line")
-        .attr("stroke-width", d => Math.sqrt(d.value));
+        .attr("stroke-width", d => Math.sqrt(d.value || 1));
 
     const node = svg.append("g")
         .attr("stroke", "#fff")
@@ -37,14 +41,22 @@
         .selectAll("circle")
         .data(nodes)
         .join("circle")
-        .attr("r", 5)
+        .attr("r", 10)
         .attr("fill", d => (d.group == 1) ? "#1f77b4" : "#ff7f0e")
-        .call(drag(simulation))
-        .on("mouseover", fade(.1))
-        .on("mouseout", fade(1));
+        .call(drag(simulation));
 
     node.append("title")
         .text(d => d.id);
+
+    const labels = svg.append("g")
+        .selectAll("text")
+        .data(nodes)
+        .enter().append("text")
+        .attr("x", 8)
+        .attr("y", 3)
+        .text(d => d.id)
+        .style("font-size", "12px")
+        .style("fill", "#000");
 
     simulation.on("tick", () => {
         link
@@ -56,10 +68,13 @@
         node
             .attr("cx", d => d.x)
             .attr("cy", d => d.y);
+
+        labels
+            .attr("x", d => d.x + 8)
+            .attr("y", d => d.y + 3);
     });
 
     function drag(simulation) {
-
         function dragstarted(d) {
             if (!d3.event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
@@ -82,29 +97,4 @@
             .on("drag", dragged)
             .on("end", dragended);
     }
-
-
-    let linkedByIndex = {};
-    links.forEach(function(d) {
-        linkedByIndex[d.source.index + "," + d.target.index] = 1;
-    });
-
-    function isConnected(a, b) {
-        return linkedByIndex[a.index + "," + b.index] || linkedByIndex[b.index + "," + a.index] || a.index == b.index;
-    }
-
-    function fade(opacity) {
-        return function(d) {
-            node.style("stroke-opacity", function(o) {
-                thisOpacity = isConnected(d, o) ? 1 : opacity;
-                this.setAttribute('fill-opacity', thisOpacity);
-                return thisOpacity;
-            });
-
-            link.style("stroke-opacity", function(o) {
-                return o.source === d || o.target === d ? 1 : opacity;
-            });
-        };
-    }
 </script>
-</html>
