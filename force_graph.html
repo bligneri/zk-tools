@@ -1,27 +1,24 @@
+<!DOCTYPE html>
 <html>
 <head>
 </head>
 <body>
 </body>
 
-<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 
-  <script>
+<script>
     let data = $data;
     let height = 800;
     let width = 1200;
-
-
-   const links = data.links.map(d => Object.create(d));
-    const nodes = data.nodes.map(d => Object.create(d));
 
     // Create the SVG element with zoom and pan functionality
     const svg = d3.select(document.body).append("svg")
         .attr("width", width)
         .attr("height", height)
-        .style("border", "1px solid black") // Optional border for visibility
+        .style("border", "1px solid black")
         .call(d3.zoom()
-            .scaleExtent([0.1, 5]) // Limit zoom scale
+            .scaleExtent([0.1, 5])
             .on("zoom", (event) => {
                 if (event && event.transform) {
                     console.log("Zoom event triggered");
@@ -41,8 +38,8 @@
     const g = svg.append("g");
 
     // Initialize the simulation
-    const simulation = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+    const simulation = d3.forceSimulation(data.nodes)
+        .force("link", d3.forceLink(data.links).id(d => d.id).distance(150))
         .force("charge", d3.forceManyBody().strength(-300))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collision", d3.forceCollide().radius(40));
@@ -52,7 +49,7 @@
         .attr("stroke", "#999")
         .attr("stroke-opacity", 0.6)
         .selectAll("line")
-        .data(links)
+        .data(data.links)
         .join("line")
         .attr("stroke-width", d => Math.sqrt(d.value || 1));
 
@@ -61,7 +58,7 @@
         .attr("stroke", "#fff")
         .attr("stroke-width", 1.5)
         .selectAll("circle")
-        .data(nodes)
+        .data(data.nodes)
         .join("circle")
         .attr("r", 10)
         .attr("fill", d => (d.group === 1) ? "#1f77b4" : "#ff7f0e")
@@ -74,7 +71,7 @@
     // Add labels to nodes
     const labels = g.append("g")
         .selectAll("text")
-        .data(nodes)
+        .data(data.nodes)
         .join("text")
         .attr("x", 12)
         .attr("y", ".31em")
