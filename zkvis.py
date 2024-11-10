@@ -10,36 +10,27 @@ def generate_force_graph(id_files_dict: Dict, id_title_dict: Dict, links: List, 
     if not highlight:
         highlight = []
 
+    nodes = [
+        {"id": title if title else path, "group": 2 if uid in highlight else 1}
+        for uid, (title, path) in id_title_dict.items()
+    ]
 
-    # Debugging logs for inputs
-    print("Debug: Starting generate_force_graph")
-    print(f"Debug: id_files_dict length: {len(id_files_dict)}")
-    print(f"Debug: id_title_dict length: {len(id_title_dict)}")
-    print(f"Debug: Highlighted IDs: {highlight}")
-
-    # Create nodes
-    nodes = []
-    for uid, (title, path) in id_title_dict.items():
-        group = 2 if uid in highlight else 1
-        node_id = title if title else path
-        nodes.append({"id": node_id, "group": group})
-        print(f"Debug: Created node - ID: {node_id}, Group: {group}")
-
+    # Create links with consistent source and target IDs
     link_list = []
-    for uid, file in id_files_dict.items():
-        file_links = file.get("links", [])
-        for link in file_links:
-            if "targetPath" in link:
-                target_path = link["targetPath"]
-                source_id = id_title_dict.get(uid, ("", uid))[1]
-                target_id = id_title_dict.get(target_path, ("", target_path))[1]
+    path_to_title = {path: title for path, (title, _) in id_title_dict.items()}
 
-                if source_id and target_id:
-                    link_data = {"source": source_id, "target": target_id, "value": 2}
-                    link_list.append(link_data)
-                    print(f"Debug: Created link - Source: {source_id}, Target: {target_id}, Value: 2")
-                else:
-                    print(f"Warning: Missing source or target for link - Source: {uid}, Target Path: {target_path}")
+    for link in links:
+        source_path = link["sourcePath"]
+        target_path = link["targetPath"]
+
+        source_id = path_to_title.get(source_path, source_path)  # Use title if available, otherwise path
+        target_id = path_to_title.get(target_path, target_path)  # Use title if available, otherwise path
+
+        if source_id and target_id:
+            print(f"Debug: Creating link from {source_id} to {target_id}")  # Debugging line
+            link_list.append({"source": source_id, "target": target_id, "value": 2})
+        else:
+            print(f"Warning: Missing source or target ID for link from {source_path} to {target_path}")
 
     # Create Output and open it
     data = json.dumps({"nodes": nodes, "links": link_list})
@@ -62,15 +53,24 @@ if __name__ == "__main__":
     try:
         with open(json_file_path, "r") as f:
             data = json.load(f)
+            links = data.get("links", [])  # Extract links from the data if present
+            if not links:
+                print("Warning: No links found in the input data.")
             data = data["notes"]
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
         print(f"Error reading JSON file: {e}")
         exit(1)
+
+    # Debugging: Print links to ensure they are loaded correctly
+    print(f"Debug: Loaded {len(links)} links")
+    for link in links:
+        print(f"Debug: Link details - {link}")
 
     id_files_dict = {item["path"]: item for item in data}
     id_title_dict = {item["path"]: (item["title"] if item["title"] else item["filename"], item["path"]) for item in data}
 
     highlight = args.highlight if args.highlight else []
 
-    generate_force_graph(id_files_dict, id_title_dict, [], highlight)
+    # Call the function and pass the data
+    generate_force_graph(id_files_dict, id_title_dict, links, highlight)
 
